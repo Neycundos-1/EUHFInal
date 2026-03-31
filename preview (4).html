@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HCL Simulator</title>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #141b34;
+      --panel2: #1b2444;
+      --line: #31406f;
+      --text: #eef3ff;
+      --muted: #a8b4da;
+      --accent: #7cc4ff;
+      --gold: #ffd76a;
+      --green: #7cf0b3;
+      --red: #ff8f8f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, Helvetica, sans-serif;
+      background: linear-gradient(180deg, #08101e, #0e1730 40%, #08101e);
+      color: var(--text);
+    }
+    .wrap { max-width: 1450px; margin: 0 auto; padding: 24px; }
+    h1, h2, h3 { margin: 0 0 12px; }
+    p { color: var(--muted); }
+    .hero { margin-bottom: 20px; }
+    .grid { display: grid; gap: 16px; }
+    .grid-2 { grid-template-columns: 1.25fr .9fr; }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .panel {
+      background: rgba(20, 27, 52, .95);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 0; }
+    button, .file-label {
+      background: var(--panel2);
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    button:hover, .file-label:hover { border-color: var(--accent); }
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      background: #0c1330;
+      color: var(--text);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 10px;
+    }
+    input[type="file"] { display: none; }
+    .small { font-size: 12px; color: var(--muted); }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      padding: 8px;
+      text-align: left;
+      vertical-align: middle;
+    }
+    th { color: var(--accent); position: sticky; top: 0; background: var(--panel); }
+    .table-wrap { max-height: 600px; overflow: auto; }
+    .logo {
+      width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid var(--line); background: #091126;
+      display: inline-block;
+    }
+    .team-cell { display: flex; align-items: center; gap: 8px; min-width: 220px; }
+    .pill { padding: 4px 8px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+    .pill.green { background: rgba(124,240,179,.15); color: var(--green); }
+    .pill.yellow { background: rgba(255,215,106,.15); color: var(--gold); }
+    .pill.red { background: rgba(255,143,143,.15); color: var(--red); }
+    .stats { display: grid; gap: 12px; grid-template-columns: repeat(4, 1fr); }
+    .stat {
+      background: #0d1430;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .stat .num { font-size: 28px; font-weight: 800; color: var(--gold); }
+    .match-list { max-height: 360px; overflow: auto; display: grid; gap: 8px; }
+    .match {
+      background: #0d1430; border: 1px solid rgba(255,255,255,.08); border-radius: 12px; padding: 10px;
+      display: flex; justify-content: space-between; gap: 8px; align-items: center;
+    }
+    .bracket {
+      overflow: auto;
+      padding-bottom: 10px;
+    }
+    .bracket-grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(220px, 1fr));
+      gap: 14px;
+      min-width: 1180px;
+    }
+    .round-col { display: grid; gap: 12px; align-content: start; }
+    .round-title { color: var(--accent); font-weight: 800; }
+    .tie {
+      background: #0d1430;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 12px;
+      padding: 10px;
+    }
+    .tie h4 { margin: 0 0 8px; font-size: 14px; color: var(--gold); }
+    .tie .line { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; }
+    .champion-box {
+      text-align: center;
+      background: linear-gradient(180deg, rgba(255,215,106,.12), rgba(255,215,106,.04));
+      border: 1px solid rgba(255,215,106,.35);
+      border-radius: 16px;
+      padding: 18px;
+    }
+    .story { background: #0d1430; padding: 10px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.08); }
+    .footer-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+    @media (max-width: 1100px) {
+      .grid-2, .grid-3, .stats { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="hero panel">
+      <h1>EHU Hockey Champions League Simulator</h1>
+      <p>Edit club names, upload logos, simulate the league phase, generate the knockout bracket, and save everything in your browser so it stays after reload.</p>
+      <div class="toolbar">
+        <button id="simulateBtn">Simulate League + Tournament</button>
+        <button id="saveBtn">Save Now</button>
+        <button id="resetSeasonBtn">Reset Season Results</button>
+        <button id="resetAllBtn">Factory Reset</button>
+        <button id="exportBtn">Export Save</button>
+        <label class="file-label" for="importInput">Import Save</label>
+        <input id="importInput" type="file" accept="application/json" />
+      </div>
+      <p class="small">Autosaves after edits and after simulations.</p>
+    </div>
+
+    <div class="grid grid-2">
+      <div class="panel">
+        <h2>Teams</h2>
+        <p class="small">You can edit each team name, seed, and strength. Strength affects simulated results.</p>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Club</th>
+                <th>Seed</th>
+                <th>Strength</th>
+                <th>Logo</th>
+              </tr>
+            </thead>
+            <tbody id="teamTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="panel">
+          <h2>Season Summary</h2>
+          <div class="stats">
+            <div class="stat"><div class="small">Champion</div><div class="num" id="championStat">—</div></div>
+            <div class="stat"><div class="small">Top Scorer</div><div class="num" id="topScorerStat">—</div></div>
+            <div class="stat"><div class="small">Best Player</div><div class="num" id="bestPlayerStat">—</div></div>
+            <div class="stat"><div class="small">Biggest Upset</div><div class="num" id="upsetStat">—</div></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>League Table</h2>
+          <div class="table-wrap" style="max-height: 420px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Pos</th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="standingsBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2>League Matches</h2>
+          <div id="matchesList" class="match-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid grid-3" style="margin-top: 16px;">
+      <div class="panel">
+        <h3>Playoff Round</h3>
+        <div id="playoffList" class="match-list"></div>
+      </div>
+      <div class="panel">
+        <h3>Knockout Stories</h3>
+        <div id="storyList" class="match-list"></div>
+      </div>
+      <div class="panel champion-box">
+        <h3>Final Champion</h3>
+        <div id="championBox" style="font-size: 30px; font-weight: 900; margin: 10px 0;">—</div>
+        <div id="finalBox" class="small">No final played yet.</div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top: 16px;">
+      <h2>Tournament Bracket</h2>
+      <div class="bracket">
+        <div class="bracket-grid">
+          <div class="round-col"><div class="round-title">Playoff Round</div><div id="bracketPlayoff"></div></div>
+          <div class="round-col"><div class="round-title">Round of 16</div><div id="bracketR16"></div></div>
+          <div class="round-col"><div class="round-title">Quarterfinals</div><div id="bracketQF"></div></div>
+          <div class="round-col"><div class="round-title">Semifinals</div><div id="bracketSF"></div></div>
+          <div class="round-col"><div class="round-title">Final</div><div id="bracketFinal"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'hcl-simulator-save-v2';
+    const TEAM_COUNT = 36;
+
+    function defaultTeams() {
+      const names = [
+        'Jokerit','Tappara','CSKA Moscow','Färjestad BK','HC Davos','Manchester Saints','Chicago Ramparts','Long Island Cannons','Toronto Blazers','SC Bern',
+        'HC Milano','Red Bull Salzburg','ZSC Lions','Frölunda HC','Lukko','Ilves','Belfast Giants','Sheffield Steel','Sparta Praha','Kometa Brno',
+        'Eisbären Berlin','Kölner Haie','Rouen Dragons','Dragons de Paris','HC Bolzano','Vienna Royals','Oslo Storm','Sporting Lisboa Ice','Madrid Toros','Barcelona Wolves',
+        'Amsterdam Blades','Brussels Lions','Warsaw Huskies','Budapest Crown','Bucharest Frost','Cardiff Union'
+      ];
+      return names.map((name, i) => ({
+        id: i + 1,
+        name,
+        seed: Math.floor(i / 9) + 1,
+        strength: Math.max(60, 95 - i),
+        logo: ''
+      }));
+    }
+
+    let state = loadState();
+
+    function loadState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) return JSON.parse(raw);
+      } catch (e) {}
+      return {
+        teams: defaultTeams(),
+        standings: [],
+        leagueMatches: [],
+        bracket: { playoff: [], r16: [], qf: [], sf: [], final: [] },
+        summary: { champion: '', topScorer: '', bestPlayer: '', upset: '', finalText: '', stories: [] }
+      };
+    }
+
+    function saveState() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    }
+
+    function debounce(fn, ms=350) {
+      let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+    }
+    const debouncedSave = debounce(saveState, 250);
+
+    function makeInitialStandings() {
+      return state.teams.map(t => ({
+        id: t.id, name: t.name, logo: t.logo, seed: t.seed,
+        played: 0, wins: 0, draws: 0, losses: 0,
+        gf: 0, ga: 0, gd: 0, pts: 0, status: ''
+      }));
+    }
+
+    function rankStandings(arr) {
+      arr.forEach(t => t.gd = t.gf - t.ga);
+      arr.sort((a,b) => b.pts - a.pts || b.gd - a.gd || b.gf - a.gf || a.seed - b.seed || a.name.localeCompare(b.name));
+      arr.forEach((t, i) => {
+        t.status = i < 8 ? 'R16' : i < 24 ? 'Playoff' : 'Eliminated';
+      });
+      return arr;
+    }
+
+    function renderTeams() {
+      const tbody = document.getElementById('teamTableBody');
+      tbody.innerHTML = '';
+      state.teams.forEach((team, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td>
+            <div class="team-cell">
+              ${team.logo ? `<img class="logo" src="${team.logo}" alt="logo">` : `<div class="logo"></div>`}
+              <input type="text" value="${escapeHtml(team.name)}" data-field="name" data-id="${team.id}" />
+            </div>
+          </td>
+          <td><select data-field="seed" data-id="${team.id}">${[1,2,3,4].map(v => `<option value="${v}" ${team.seed===v?'selected':''}>Pot ${v}</option>`).join('')}</select></td>
+          <td><input type="number" min="50" max="99" value="${team.strength}" data-field="strength" data-id="${team.id}" /></td>
+          <td><label class="file-label" for="logo-${team.id}">Upload</label><input id="logo-${team.id}" type="file" accept="image/*" data-id="${team.id}" data-field="logoUpload"></td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      tbody.querySelectorAll('input[data-field="name"], input[data-field="strength"], select[data-field="seed"]').forEach(el => {
+        el.addEventListener('input', onTeamEdit);
+        el.addEventListener('change', onTeamEdit);
+      });
+      tbody.querySelectorAll('input[data-field="logoUpload"]').forEach(el => el.addEventListener('change', onLogoUpload));
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    }
+
+    function onTeamEdit(e) {
+      const id = Number(e.target.dataset.id);
+      const field = e.target.dataset.field;
+      const team = state.teams.find(t => t.id === id);
+      if (!team) return;
+      if (field === 'name') team.name = e.target.value || `Team ${id}`;
+      if (field === 'seed') team.seed = Number(e.target.value);
+      if (field === 'strength') team.strength = Math.max(50, Math.min(99, Number(e.target.value) || 75));
+      debouncedSave();
+      renderAll();
+    }
+
+    function onLogoUpload(e) {
+      const id = Number(e.target.dataset.id);
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const team = state.teams.find(t => t.id === id);
+        if (team) {
+          team.logo = reader.result;
+          saveState();
+          renderAll();
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function seededSchedule(teams) {
+      const pools = {1:[],2:[],3:[],4:[]};
+      teams.forEach(t => pools[t.seed].push(t));
+      Object.values(pools).forEach(arr => shuffle(arr));
+      const schedule = [];
+      const pairSet = new Set();
+      const teamOpp = Object.fromEntries(teams.map(t => [t.id, new Set()]));
+      const allIds = teams.map(t=>t.id);
+
+      function canPair(a,b) {
+        return a.id !== b.id && !teamOpp[a.id].has(b.id) && teamOpp[a.id].size < 8 && teamOpp[b.id].size < 8;
+      }
+
+      function addPair(a,b, homeBias=0.5) {
+        const key = [Math.min(a.id,b.id), Math.max(a.id,b.id)].join('-');
+        if (pairSet.has(key)) return false;
+        pairSet.add(key);
+        teamOpp[a.id].add(b.id); teamOpp[b.id].add(a.id);
+        const home = Math.random() < homeBias ? a : b;
+        const away = home.id === a.id ? b : a;
+        schedule.push({ homeId: home.id, awayId: away.id });
+        return true;
+      }
+
+      // Each club gets 2 opponents from each pot including its own, aiming for 8 total.
+      teams.forEach(team => {
+        for (let pot = 1; pot <= 4; pot++) {
+          let tries = 0;
+          while ([...teamOpp[team.id]].filter(id => teams.find(t => t.id===id).seed === pot).length < 2 && tries < 200) {
+            const candidates = pools[pot].filter(other => canPair(team, other));
+            if (!candidates.length) break;
+            const other = candidates[Math.floor(Math.random() * candidates.length)];
+            addPair(team, other);
+            tries++;
+          }
+        }
+      });
+
+      // Repair pass if some teams have < 8 opponents.
+      let repairLoops = 0;
+      while (teams.some(t => teamOpp[t.id].size < 8) && repairLoops < 2000) {
+        repairLoops++;
+        const needy = teams.filter(t => teamOpp[t.id].size < 8).sort((a,b) => teamOpp[a.id].size - teamOpp[b.id].size)[0];
+        const candidates = teams.filter(t => canPair(needy, t));
+        if (!candidates.length) break;
+        const other = candidates.sort((a,b) => teamOpp[a.id].size - teamOpp[b.id].size)[0];
+        addPair(needy, other);
+      }
+
+      // Trim overfilled by rare edge-case prevention (should be okay).
+      return schedule.filter(m => teamOpp[m.homeId].has(m.awayId));
+    }
+
+    function simulateLeague() {
+      const schedule = seededSchedule(state.teams);
+      const standings = makeInitialStandings();
+      const sMap = Object.fromEntries(standings.map(s => [s.id, s]));
+      const playerPool = [];
+      const leagueMatches = [];
+      let biggestUpset = { value: -1, text: '' };
+
+      for (const fixture of schedule) {
+        const homeTeam = state.teams.find(t => t.id === fixture.homeId);
+        const awayTeam = state.teams.find(t => t.id === fixture.awayId);
+        const result = simulateMatch(homeTeam, awayTeam, false);
+        applyMatchToStandings(result, sMap);
+        leagueMatches.push(result);
+        result.scorers.forEach(s => playerPool.push(s));
+        const upset = Math.abs(homeTeam.strength - awayTeam.strength);
+        const winnerId = result.homeGoals > result.awayGoals ? homeTeam.id : result.awayGoals > result.homeGoals ? awayTeam.id : null;
+        const strongerId = homeTeam.strength >= awayTeam.strength ? homeTeam.id : awayTeam.id;
+        if (winnerId && winnerId !== strongerId && upset > biggestUpset.value) {
+          biggestUpset = { value: upset, text: `${teamName(winnerId)} beat ${teamName(strongerId)}` };
+        }
+      }
+
+      rankStandings(standings);
+      state.standings = standings;
+      state.leagueMatches = leagueMatches;
+      state.summary.upset = biggestUpset.text || 'No major upset';
+
+      const scorerCounts = {};
+      playerPool.forEach(p => scorerCounts[p.player] = (scorerCounts[p.player] || 0) + 1);
+      const topScorer = Object.entries(scorerCounts).sort((a,b) => b[1]-a[1])[0];
+      state.summary.topScorer = topScorer ? `${topScorer[0]} (${topScorer[1]})` : '—';
+    }
+
+    function teamName(id) {
+      const t = state.teams.find(x => x.id === id);
+      return t ? t.name : 'Unknown';
+    }
+
+    function teamLogo(id) {
+      const t = state.teams.find(x => x.id === id);
+      return t ? t.logo : '';
+    }
+
+    function simulateMatch(homeTeam, awayTeam, allowDraw=true) {
+      const homeAdv = 6;
+      const strengthDiff = (homeTeam.strength + homeAdv) - awayTeam.strength;
+      const baseHome = clamp(1.3 + strengthDiff / 24 + Math.random()*1.6, 0, 6);
+      const baseAway = clamp(1.1 - strengthDiff / 28 + Math.random()*1.6, 0, 6);
+      let homeGoals = Math.round(baseHome);
+      let awayGoals = Math.round(baseAway);
+      if (!allowDraw && homeGoals === awayGoals) {
+        if (Math.random() < 0.5) homeGoals++; else awayGoals++;
+      }
+      const scorers = [];
+      for (let i=0;i<homeGoals;i++) scorers.push({ teamId: homeTeam.id, player: `${homeTeam.name} Player ${1 + Math.floor(Math.random()*12)}` });
+      for (let i=0;i<awayGoals;i++) scorers.push({ teamId: awayTeam.id, player: `${awayTeam.name} Player ${1 + Math.floor(Math.random()*12)}` });
+      return {
+        homeId: homeTeam.id,
+        awayId: awayTeam.id,
+        homeName: homeTeam.name,
+        awayName: awayTeam.name,
+        homeGoals,
+        awayGoals,
+        scorers,
+        note: ''
+      };
+    }
+
+    function applyMatchToStandings(match, sMap) {
+      const h = sMap[match.homeId], a = sMap[match.awayId];
+      h.played++; a.played++;
+      h.gf += match.homeGoals; h.ga += match.awayGoals;
+      a.gf += match.awayGoals; a.ga += match.homeGoals;
+      if (match.homeGoals > match.awayGoals) { h.wins++; h.pts += 3; a.losses++; }
+      else if (match.awayGoals > match.homeGoals) { a.wins++; a.pts += 3; h.losses++; }
+      else { h.draws++; a.draws++; h.pts += 1; a.pts += 1; }
+    }
+
+    function clamp(n,min,max){ return Math.max(min, Math.min(max, n)); }
+    function shuffle(arr){ for (let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; } return arr; }
+
+    function simulateTwoLegTie(teamA, teamB, label) {
+      const leg1 = simulateMatch(teamA, teamB, false); // A home
+      const leg2 = simulateMatch(teamB, teamA, false); // B home
+      let aAgg = leg1.homeGoals + leg2.awayGoals;
+      let bAgg = leg1.awayGoals + leg2.homeGoals;
+      let winner = null;
+      let note = '';
+      if (aAgg === bAgg) {
+        const otWinner = Math.random() < ((teamA.strength) / (teamA.strength + teamB.strength)) ? teamA : teamB;
+        winner = otWinner;
+        note = Math.random() < 0.65 ? 'Won in overtime' : 'Won on penalties';
+      } else {
+        winner = aAgg > bAgg ? teamA : teamB;
+      }
+      return {
+        label,
+        teamAId: teamA.id, teamBId: teamB.id,
+        teamAName: teamA.name, teamBName: teamB.name,
+        leg1: `${teamA.name} ${leg1.homeGoals}-${leg1.awayGoals} ${teamB.name}`,
+        leg2: `${teamB.name} ${leg2.homeGoals}-${leg2.awayGoals} ${teamA.name}`,
+        aggregate: `${teamA.name} ${aAgg}-${bAgg} ${teamB.name}`,
+        winnerId: winner.id,
+        winnerName: winner.name,
+        note
+      };
+    }
+
+    function generateBracket() {
+      const standings = state.standings;
+      const top8 = standings.slice(0,8).map(s => state.teams.find(t => t.id === s.id));
+      const playoffTeams = standings.slice(8,24).map(s => state.teams.find(t => t.id === s.id));
+
+      const playoffPairs = [];
+      for (let i = 0; i < 8; i++) {
+        playoffPairs.push([playoffTeams[i], playoffTeams[15 - i]]);
+      }
+      const playoff = playoffPairs.map((pair, idx) => simulateTwoLegTie(pair[0], pair[1], `PO ${idx+1}`));
+      const playoffWinners = playoff.map(t => state.teams.find(x => x.id === t.winnerId));
+
+      const r16Teams = top8.concat(playoffWinners);
+      const r16Pairs = [];
+      for (let i = 0; i < 8; i++) r16Pairs.push([r16Teams[i], r16Teams[15-i]]);
+      const r16 = r16Pairs.map((pair, idx) => simulateTwoLegTie(pair[0], pair[1], `R16 ${idx+1}`));
+      const qfTeams = r16.map(t => state.teams.find(x => x.id === t.winnerId));
+
+      const qfPairs = [[qfTeams[0],qfTeams[1]],[qfTeams[2],qfTeams[3]],[qfTeams[4],qfTeams[5]],[qfTeams[6],qfTeams[7]]];
+      const qf = qfPairs.map((pair, idx) => simulateTwoLegTie(pair[0], pair[1], `QF ${idx+1}`));
+      const sfTeams = qf.map(t => state.teams.find(x => x.id === t.winnerId));
+
+      const sfPairs = [[sfTeams[0],sfTeams[1]],[sfTeams[2],sfTeams[3]]];
+      const sf = sfPairs.map((pair, idx) => simulateTwoLegTie(pair[0], pair[1], `SF ${idx+1}`));
+      const finalTeams = sf.map(t => state.teams.find(x => x.id === t.winnerId));
+
+      const finalMatch = simulateMatch(finalTeams[0], finalTeams[1], false);
+      let finalWinner = null;
+      let finalNote = '';
+      if (finalMatch.homeGoals === finalMatch.awayGoals) {
+        finalWinner = Math.random() < (finalTeams[0].strength / (finalTeams[0].strength + finalTeams[1].strength)) ? finalTeams[0] : finalTeams[1];
+        finalNote = Math.random() < 0.65 ? 'Won the final in overtime' : 'Won the final on penalties';
+      } else {
+        finalWinner = finalMatch.homeGoals > finalMatch.awayGoals ? finalTeams[0] : finalTeams[1];
+      }
+      const final = [{
+        label: 'Final',
+        teamAId: finalTeams[0].id,
+        teamBId: finalTeams[1].id,
+        teamAName: finalTeams[0].name,
+        teamBName: finalTeams[1].name,
+        aggregate: `${finalTeams[0].name} ${finalMatch.homeGoals}-${finalMatch.awayGoals} ${finalTeams[1].name}`,
+        winnerId: finalWinner.id,
+        winnerName: finalWinner.name,
+        note: finalNote
+      }];
+
+      state.bracket = { playoff, r16, qf, sf, final };
+      state.summary.champion = finalWinner.name;
+      state.summary.finalText = `${final[0].aggregate}${finalNote ? ' — ' + finalNote : ''}`;
+      state.summary.bestPlayer = `${finalWinner.name} Player ${1 + Math.floor(Math.random()*8)}`;
+      state.summary.stories = makeStories(playoff, r16, qf, sf, final);
+    }
+
+    function makeStories(playoff, r16, qf, sf, final) {
+      const stories = [];
+      const allTies = [...playoff, ...r16, ...qf, ...sf, ...final];
+      const dramatic = allTies.filter(t => t.note);
+      if (dramatic[0]) stories.push(`${dramatic[0].winnerName} survived a dramatic tie: ${dramatic[0].note.toLowerCase()}.`);
+      const playoffWinner = playoff[0]?.winnerName;
+      if (playoffWinner) stories.push(`${playoffWinner} came through the playoff round to keep the dream alive.`);
+      const finalist = final[0]?.teamAName;
+      const finalist2 = final[0]?.teamBName;
+      if (finalist && finalist2) stories.push(`The final was ${finalist} vs ${finalist2}.`);
+      const champ = final[0]?.winnerName;
+      if (champ) stories.push(`${champ} lifted the HCL trophy and claimed club international supremacy.`);
+      return stories;
+    }
+
+    function renderStandings() {
+      const tbody = document.getElementById('standingsBody');
+      tbody.innerHTML = '';
+      const standings = state.standings.length ? state.standings : rankStandings(makeInitialStandings());
+      standings.forEach((t, idx) => {
+        const statusClass = idx < 8 ? 'green' : idx < 24 ? 'yellow' : 'red';
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${idx + 1}</td>
+          <td><div class="team-cell">${teamLogo(t.id) ? `<img class="logo" src="${teamLogo(t.id)}">` : `<div class="logo"></div>`}<span>${escapeHtml(teamName(t.id))}</span></div></td>
+          <td>${t.played || 0}</td><td>${t.wins || 0}</td><td>${t.draws || 0}</td><td>${t.losses || 0}</td>
+          <td>${t.gf || 0}</td><td>${t.ga || 0}</td><td>${(t.gf||0)-(t.ga||0)}</td><td>${t.pts || 0}</td>
+          <td><span class="pill ${statusClass}">${idx < 8 ? 'R16' : idx < 24 ? 'Playoff' : 'Out'}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderLeagueMatches() {
+      const el = document.getElementById('matchesList');
+      el.innerHTML = '';
+      if (!state.leagueMatches.length) {
+        el.innerHTML = '<div class="small">No matches simulated yet.</div>';
+        return;
+      }
+      state.leagueMatches.slice(0, 120).forEach(m => {
+        const div = document.createElement('div');
+        div.className = 'match';
+        div.innerHTML = `<span>${escapeHtml(m.homeName)} vs ${escapeHtml(m.awayName)}</span><strong>${m.homeGoals} - ${m.awayGoals}</strong>`;
+        el.appendChild(div);
+      });
+    }
+
+    function renderPlayoffList() {
+      const el = document.getElementById('playoffList');
+      el.innerHTML = '';
+      if (!state.bracket.playoff.length) {
+        el.innerHTML = '<div class="small">No playoff round generated yet.</div>';
+        return;
+      }
+      state.bracket.playoff.forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'match';
+        div.innerHTML = `<span>${escapeHtml(t.teamAName)} vs ${escapeHtml(t.teamBName)}</span><strong>${escapeHtml(t.aggregate)}</strong>`;
+        el.appendChild(div);
+      });
+    }
+
+    function renderStories() {
+      const el = document.getElementById('storyList');
+      el.innerHTML = '';
+      const stories = state.summary.stories || [];
+      if (!stories.length) {
+        el.innerHTML = '<div class="small">No stories yet.</div>';
+        return;
+      }
+      stories.forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'story';
+        div.textContent = s;
+        el.appendChild(div);
+      });
+    }
+
+    function tieCard(tie) {
+      return `
+        <div class="tie">
+          <h4>${escapeHtml(tie.label)}</h4>
+          <div class="line"><span>${escapeHtml(tie.teamAName)}</span><strong>${escapeHtml(tie.aggregate.split(' ')[1] || '')}</strong></div>
+          <div class="line"><span>${escapeHtml(tie.teamBName)}</span><span>${escapeHtml(tie.note || '')}</span></div>
+          <div class="small" style="margin-top: 8px;">Winner: ${escapeHtml(tie.winnerName)}</div>
+          ${tie.leg1 ? `<div class="small">${escapeHtml(tie.leg1)}</div>` : ''}
+          ${tie.leg2 ? `<div class="small">${escapeHtml(tie.leg2)}</div>` : ''}
+        </div>
+      `;
+    }
+
+    function renderBracket() {
+      document.getElementById('bracketPlayoff').innerHTML = state.bracket.playoff.map(tieCard).join('') || '<div class="small">Waiting for simulation.</div>';
+      document.getElementById('bracketR16').innerHTML = state.bracket.r16.map(tieCard).join('') || '<div class="small">Waiting for simulation.</div>';
+      document.getElementById('bracketQF').innerHTML = state.bracket.qf.map(tieCard).join('') || '<div class="small">Waiting for simulation.</div>';
+      document.getElementById('bracketSF').innerHTML = state.bracket.sf.map(tieCard).join('') || '<div class="small">Waiting for simulation.</div>';
+      document.getElementById('bracketFinal').innerHTML = state.bracket.final.map(tieCard).join('') || '<div class="small">Waiting for simulation.</div>';
+    }
+
+    function renderSummary() {
+      document.getElementById('championStat').textContent = state.summary.champion || '—';
+      document.getElementById('topScorerStat').textContent = state.summary.topScorer || '—';
+      document.getElementById('bestPlayerStat').textContent = state.summary.bestPlayer || '—';
+      document.getElementById('upsetStat').textContent = state.summary.upset || '—';
+      document.getElementById('championBox').textContent = state.summary.champion || '—';
+      document.getElementById('finalBox').textContent = state.summary.finalText || 'No final played yet.';
+    }
+
+    function renderAll() {
+      renderTeams();
+      renderStandings();
+      renderLeagueMatches();
+      renderPlayoffList();
+      renderStories();
+      renderBracket();
+      renderSummary();
+    }
+
+    document.getElementById('simulateBtn').addEventListener('click', () => {
+      simulateLeague();
+      generateBracket();
+      saveState();
+      renderAll();
+    });
+
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      saveState();
+      alert('Saved successfully.');
+    });
+
+    document.getElementById('resetSeasonBtn').addEventListener('click', () => {
+      state.standings = [];
+      state.leagueMatches = [];
+      state.bracket = { playoff: [], r16: [], qf: [], sf: [], final: [] };
+      state.summary = { champion: '', topScorer: '', bestPlayer: '', upset: '', finalText: '', stories: [] };
+      saveState();
+      renderAll();
+    });
+
+    document.getElementById('resetAllBtn').addEventListener('click', () => {
+      if (!confirm('This will erase all teams, logos, and saved results. Continue?')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      state = loadState();
+      saveState();
+      renderAll();
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', () => {
+      const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'hcl-simulator-save.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById('importInput').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const imported = JSON.parse(text);
+        if (!imported.teams) throw new Error('Invalid save file');
+        state = imported;
+        saveState();
+        renderAll();
+        alert('Save imported successfully.');
+      } catch (err) {
+        alert('Import failed. Please use a valid save file.');
+      }
+    });
+
+    if (!state.standings.length) {
+      state.standings = rankStandings(makeInitialStandings());
+      saveState();
+    }
+
+    renderAll();
+  </script>
+</body>
+</html>
